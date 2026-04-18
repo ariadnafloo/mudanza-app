@@ -1,22 +1,29 @@
 import { Html, Head, Main, NextScript } from "next/document";
 
-export default function Document() {
-  return (
-      <Html lang="es">
-            <Head>
-                    <link rel="icon" href="/favicon.ico" sizes="32x32" />
-                            <link rel="icon" href="/favicon-512.png" sizes="512x512" type="image/png" />
-                                    <link rel="apple-touch-icon" href="/favicon-192.png" />
-                                            <link rel="manifest" href="/manifest.json" />
-                                                    <meta name="theme-color" content="#002FA7" />
-                                                            <meta name="apple-mobile-web-app-capable" content="yes" />
-                                                                    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-                                                                            <meta name="apple-mobile-web-app-title" content="Mudanza" />
-                                                                                  </Head>
-                                                                                        <body>
-                                                                                                <Main />
-                                                                                                        <NextScript />
-                                                                                                              </body>
-                                                                                                                  </Html>
-                                                                                                                    );
-                                                                                                                    }
+// SVG favicon: 📦 emoji on azul klein background — no image files needed
+const faviconSvg = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <rect width="100" height="100" rx="18" fill="#002FA7"/>
+            <text y="78" x="50" text-anchor="middle" font-size="72">📦</text>
+            </svg>;
+
+            const faviconDataUrl = data:image/svg+xml,${encodeURIComponent(faviconSvg)};
+
+            export default function Document() {
+              return (
+                  <Html lang="es">
+                        <Head>
+                                <link rel="icon" href={faviconDataUrl} />
+                                        <link rel="apple-touch-icon" href={faviconDataUrl} />
+                                                <link rel="manifest" href="/manifest.json" />
+                                                        <meta name="theme-color" content="#002FA7" />
+                                                                <meta name="apple-mobile-web-app-capable" content="yes" />
+                                                                        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+                                                                                <meta name="apple-mobile-web-app-title" content="Mudanza" />
+                                                                                      </Head>
+                                                                                            <body>
+                                                                                                    <Main />
+                                                                                                            <NextScript />
+                                                                                                                  </body>
+                                                                                                                      </Html>
+                                                                                                                        );
+                                                                                                                        }
