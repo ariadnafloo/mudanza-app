@@ -129,6 +129,7 @@ export default function App() {
   const [shoppingResults, setShoppingResults] = useState({});
   const [expanded, setExpanded] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   // Load items from Supabase on login
   useEffect(() => {
@@ -400,7 +401,31 @@ export default function App() {
                         { label: "Original", content: <input type="number" value={item.original_price} onChange={e => updateOriginalPrice(item.id, e.target.value)} style={{ width: "100%", border: "none", background: "transparent", fontFamily: sf, fontSize: 15, fontWeight: 600, color: "#1c1c1e", textAlign: "center", outline: "none", padding: 0 }} /> },
                         { label: "−30%", content: <span style={{ fontSize: 15, fontWeight: 600, color: "#ff3b30" }}>{formatEur(item.minus30)}</span> },
                         { label: "Wallapop", content: <span style={{ fontSize: 15, fontWeight: 600, color: "#34c759" }}>{formatEur(item.wallapop)}</span> },
-                        { label: "Tu precio", content: <input type="number" value={item.suggested} onChange={e => updateSuggested(item.id, e.target.value)} style={{ width: "100%", border: "none", background: "transparent", fontFamily: sf, fontSize: 15, fontWeight: 700, color: "#007aff", textAlign: "center", outline: "none", padding: 0 }} />, highlight: true },
+                        { label: "Tu precio", content: (() => {
+                          const editing = editingId === item.id;
+                          return (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                              {editing ? (
+                                <input autoFocus type="number" defaultValue={item.suggested}
+                                  onBlur={e => { updateSuggested(item.id, e.target.value); setEditingId(null); }}
+                                  onKeyDown={e => { if (e.key === "Enter") { updateSuggested(item.id, e.target.value); setEditingId(null); } if (e.key === "Escape") setEditingId(null); }}
+                                  style={{ width: 70, border: "none", borderBottom: "2px solid #007aff", background: "transparent", fontFamily: sf, fontSize: 15, fontWeight: 700, color: "#007aff", textAlign: "center", outline: "none", padding: "0 0 2px 0" }}
+                                />
+                              ) : (
+                                <>
+                                  <span style={{ fontSize: 15, fontWeight: 700, color: "#007aff" }}>{formatEur(item.suggested)}</span>
+                                  <button onClick={() => setEditingId(item.id)}
+                                    style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px", display: "flex", alignItems: "center", color: "#8e8e93" }}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })(), highlight: true },
                       ].map((col, idx) => (
                         <div key={col.label} style={{ flex: 1, padding: "12px 6px", textAlign: "center", borderRight: idx < 3 ? "1px solid #e5e5ea" : "none", background: col.highlight ? "rgba(0,122,255,0.07)" : "transparent" }}>
                           <div style={{ fontSize: 10, color: "#8e8e93", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{col.label}</div>
