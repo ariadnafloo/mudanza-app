@@ -462,7 +462,7 @@ function ActivityView({ activity }) {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {items.map(item => {
+              {[...items].sort((a,b) => { const r = i => i.sold?2:i.published?1:0; return r(a)-r(b); }).map(item => {
                 const wRes = wallapopResults[item.id];
                 const sRes = shoppingResults[item.id];
                 const isExpanded = expanded === item.id;
@@ -561,7 +561,7 @@ function ActivityView({ activity }) {
                                     <div key={l}><div style={{ fontSize: 11, color: "#8e8e93", fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>{l}</div><div style={{ fontWeight: 700, color: c, fontSize: 16 }}>{formatEur(v)}</div></div>
                                   ))}
                                 </div>
-                                {wRes.[...items].sort((a,b) => { const r = i => i.sold?2:i.published?1:0; return r(a)-r(b); }).map((r, i) => (
+                                {wRes.items.map((r, i) => (
                                   <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderTop: "1px solid #e5e5ea", fontSize: 13 }}>
                                     <span style={{ color: "#3a3a3c", flex: 1, marginRight: 8 }}>{r.title || r.name || "Artículo"}</span>
                                     <span style={{ fontWeight: 700, color: "#007aff" }}>{formatEur(r.price)}</span>
