@@ -126,6 +126,70 @@ export default function App() {
   const [updatingAll, setUpdatingAll] = useState(false);
   const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0 });
   const [wallapopResults, setWallapopResults] = useState({});
+
+const FILTER_CHIPS = [
+  { key: "all", label: "Todos" },
+  { key: "added", label: "Añadidos" },
+  { key: "price", label: "Modificados" },
+  { key: "sold", label: "Vendidos" },
+  { key: "deleted", label: "Eliminados" },
+];
+const activityConfig = {
+  added:   { icon: "＋", color: "#007aff", bg: "rgba(0,122,255,0.1)",  label: "Añadido" },
+  price:   { icon: "↕",  color: "#ff9500", bg: "rgba(255,149,0,0.1)",  label: "Precio" },
+  sold:    { icon: "✓",  color: "#34c759", bg: "rgba(52,199,89,0.1)",  label: "Vendido" },
+  deleted: { icon: "✕",  color: "#ff3b30", bg: "rgba(255,59,48,0.1)",  label: "Eliminado" },
+};
+function formatRelTime(date) {
+  const diff = Date.now() - new Date(date).getTime();
+  const h = Math.floor(diff / 3600000), d = Math.floor(diff / 86400000);
+  if (h < 1) return "Hace menos de 1h";
+  if (h < 24) return `Hace ${h}h`;
+  if (d === 1) return "Ayer";
+  return `Hace ${d} días`;
+}
+function ActivityView({ activity }) {
+  const [filter, setFilter] = React.useState("all");
+  const filtered = filter === "all" ? activity : activity.filter(e => e.type === filter);
+  const sf = "'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+  return (
+    <div style={{ marginTop: 24 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#8e8e93", marginBottom: 12, letterSpacing: 0.3 }}>HISTORIAL DE ACTIVIDAD</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+        {FILTER_CHIPS.map(chip => {
+          const cfg = activityConfig[chip.key];
+          const active = filter === chip.key;
+          const count = chip.key === "all" ? activity.length : activity.filter(e => e.type === chip.key).length;
+          return (
+            <button key={chip.key} onClick={() => setFilter(chip.key)} style={{ display: "flex", alignItems: "center", gap: 5, background: active ? (cfg ? cfg.color : "#1c1c1e") : "white", color: active ? "white" : (cfg ? cfg.color : "#3a3a3c"), border: "1.5px solid " + (active ? "transparent" : (cfg ? cfg.color : "#e5e5ea")), borderRadius: 99, padding: "5px 12px", fontFamily: sf, fontSize: 12, fontWeight: 600, cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              {chip.label}
+              <span style={{ background: active ? "rgba(255,255,255,0.25)" : (cfg ? cfg.bg : "#f2f2f7"), color: active ? "white" : (cfg ? cfg.color : "#8e8e93"), borderRadius: 99, padding: "0 6px", fontSize: 11, fontWeight: 700 }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ background: "white", borderRadius: 20, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
+        {filtered.length === 0 && <div style={{ padding: 32, textAlign: "center", color: "#aeaeb2", fontSize: 14 }}>Sin actividad en esta categoría</div>}
+        {filtered.map((ev, idx) => {
+          const cfg = activityConfig[ev.type] || activityConfig.added;
+          return (
+            <div key={ev.id || idx} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 18px", borderTop: idx > 0 ? "1px solid #f2f2f7" : "none" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: cfg.color, fontWeight: 700, flexShrink: 0 }}>{cfg.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#1c1c1e" }}>{ev.name}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: cfg.color, background: cfg.bg, borderRadius: 99, padding: "1px 7px" }}>{cfg.label}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "#8e8e93" }}>{ev.detail}</div>
+              </div>
+              <div style={{ fontSize: 11, color: "#aeaeb2", whiteSpace: "nowrap", flexShrink: 0 }}>{formatRelTime(ev.created_at)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
   const [shoppingResults, setShoppingResults] = useState({});
   const [expanded, setExpanded] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -142,10 +206,18 @@ export default function App() {
     })();
   }, [authed]);
 
+  const [activity, setActivity] = useState([]);
   const resetForm = () => {
     setForm({ name: "", category: "Muebles", originalPrice: "", condition: "Bueno" });
     setFormPriceSuggestion(null); setFormPriceError(null); setFetchingFormPrice(false);
   };
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(50);
+      if (data) setActivity(data);
+    })();
+  }, []);
 
   const handleSearchOnline = async () => {
     if (!form.name.trim()) return;
@@ -174,21 +246,25 @@ export default function App() {
 
   const handleDelete = async (id) => {
     await supabase.from("items").delete().eq("id", id);
+    await supabase.from("activity_log").insert({ type: "added",   name: newItem.name,                                       detail: "Añadido · precio de venta " + formatEur(newItem.suggested), created_at: new Date().toISOString() });
     setItems(prev => prev.filter(i => i.id !== id));
   };
 
   const toggleSold = async (id) => {
+    await supabase.from("activity_log").insert({ type: "deleted", name: items.find(i => i.id === id)?.name || String(id), detail: "Artículo eliminado",                                           created_at: new Date().toISOString() });
     const item = items.find(i => i.id === id);
     const newVal = !item.sold;
     await supabase.from("items").update({ sold: newVal }).eq("id", id);
     setItems(prev => prev.map(i => i.id === id ? { ...i, sold: newVal } : i));
   };
 
+    await supabase.from("activity_log").insert({ type: "sold",    name: items.find(i => i.id === id)?.name || String(id), detail: "Vendido por " + formatEur(items.find(i => i.id === id)?.suggested || 0), created_at: new Date().toISOString() });
   const updateSuggested = async (id, val) => {
     const v = parseFloat(val) || 0;
     await supabase.from("items").update({ suggested: v }).eq("id", id);
     setItems(prev => prev.map(i => i.id === id ? { ...i, suggested: v } : i));
   };
+    await supabase.from("activity_log").insert({ type: "price",   name: items.find(i => i.id === id)?.name || String(id), detail: "Precio actualizado → " + formatEur(parseFloat(val) || 0),         created_at: new Date().toISOString() });
 
   const updateOriginalPrice = async (id, val) => {
     const orig = parseFloat(val) || 0;
@@ -310,6 +386,7 @@ export default function App() {
               )}
             </div>
           )}
+      <ActivityView activity={activity} />
 
           {!adding ? (
             <button onClick={() => setAdding(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#007aff", color: "white", border: "none", borderRadius: 12, padding: "13px", fontFamily: sf, fontSize: 16, cursor: "pointer", marginBottom: 20, fontWeight: 600, width: "100%" }}>
