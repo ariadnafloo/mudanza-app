@@ -119,6 +119,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: "", category: "Muebles", originalPrice: "", condition: "Bueno" });
   const [adding, setAdding] = useState(false);
+  const [priceRef, setPriceRef] = useState(null);
+  const [loadingRef, setLoadingRef] = useState(false);
   const [fetchingFormPrice, setFetchingFormPrice] = useState(false);
   const [formPriceSuggestion, setFormPriceSuggestion] = useState(null);
   const [formPriceError, setFormPriceError] = useState(null);
@@ -238,6 +240,7 @@ function ActivityView({ activity }) {
       wallapop: parseFloat((orig * (1 - discount)).toFixed(2)),
       suggested: parseFloat((orig * (1 - discount)).toFixed(2)),
       sold: false,
+      published: false,
     };
     const { data } = await supabase.from("items").insert(newItem).select().single();
     if (data) setItems(prev => [...prev, data]);
@@ -246,6 +249,14 @@ function ActivityView({ activity }) {
   };
 
   const handleDelete = async (id) => {
+
+  const togglePublished = async (id) => {
+    const item = items.find(i => i.id === id);
+    const newVal = !item.published;
+    await supabase.from("items").update({ published: newVal }).eq("id", id);
+    setItems(prev => prev.map(i => i.id === id ? { ...i, published: newVal } : i));
+  };
+
     await supabase.from("items").delete().eq("id", id);
     setItems(prev => prev.filter(i => i.id !== id));
     await supabase.from("activity_log").insert({ type: "deleted", name: items.find(i => i.id === id)?.name || String(id), detail: "Artículo eliminado",                                           created_at: new Date().toISOString() });
@@ -468,7 +479,8 @@ function ActivityView({ activity }) {
                         <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
                           <span style={{ background: "#f2f2f7", color: "#3a3a3c", borderRadius: 99, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>{item.category}</span>
                           <span style={{ background: "#f2f2f7", color: "#8e8e93", borderRadius: 99, padding: "3px 10px", fontSize: 12 }}>{item.condition}</span>
-                          {item.sold && <span style={{ background: "#d1fae5", color: "#059669", borderRadius: 99, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>Vendido</span>}
+                          {item.published && !item.sold && <span style={{ background: "rgba(0,122,255,0.1)", color: "#007aff", borderRadius: 99, padding: "2px 9px", fontSize: 11, fontWeight: 600 }}>Publicado</span>}
+                      {item.sold && <span style={{ background: "#d1fae5", color: "#059669", borderRadius: 99, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>Vendido</span>}
                         </div>
                       </div>
                       <button onClick={() => handleDelete(item.id)} style={{ background: "rgba(118,118,128,0.12)", border: "none", color: "#8e8e93", cursor: "pointer", fontSize: 16, borderRadius: 99, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, flexShrink: 0 }}>×</button>
@@ -510,22 +522,13 @@ function ActivityView({ activity }) {
                         </div>
                       ))}
                     </div>
-                    <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-                      <button onClick={() => searchGoogleShoppingItem(item)} disabled={!!searching || updatingAll} style={{ flex: "1 1 auto", background: isSearchingShopping ? "#f2f2f7" : "#34c759", color: isSearchingShopping ? "#8e8e93" : "white", border: "none", borderRadius: 10, padding: "10px 12px", fontFamily: sf, fontSize: 13, cursor: (searching || updatingAll) ? "not-allowed" : "pointer", fontWeight: 600 }}>
-                        {isSearchingShopping ? "Buscando…" : "🛍️ Precio nuevo"}
-                      </button>
-                      <button onClick={() => searchWallapop(item)} disabled={!!searching || updatingAll} style={{ flex: "1 1 auto", background: isSearchingWallapop ? "#f2f2f7" : "#007aff", color: isSearchingWallapop ? "#8e8e93" : "white", border: "none", borderRadius: 10, padding: "10px 12px", fontFamily: sf, fontSize: 13, cursor: (searching || updatingAll) ? "not-allowed" : "pointer", fontWeight: 600 }}>
-                        {isSearchingWallapop ? "Buscando…" : "🔍 Wallapop"}
-                      </button>
-                      <button onClick={() => toggleSold(item.id)} style={{ flex: "1 1 auto", background: item.sold ? "#34c759" : "#f2f2f7", color: item.sold ? "white" : "#3a3a3c", border: "none", borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontSize: 13, fontFamily: sf, fontWeight: 600 }}>
-                        {item.sold ? "✓ Vendido" : "Marcar vendido"}
-                      </button>
-                      {(wRes || sRes) && (
-                        <button onClick={() => setExpanded(isExpanded ? null : item.id)} style={{ background: "#f2f2f7", color: "#3a3a3c", border: "none", borderRadius: 10, padding: "10px 14px", cursor: "pointer", fontSize: 13, fontFamily: sf, fontWeight: 500 }}>
-                          {isExpanded ? "Ocultar" : "Ver datos"}
-                        </button>
-                      )}
-                    </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontFamily: sf, color: "#3a3a3c", fontWeight: 600, userSelect: "none" }}>
+                    <input type="checkbox" checked={!!item.published} onChange={() => togglePublished(item.id)} style={{ width: 15, height: 15, accentColor: "#007aff", cursor: "pointer" }} />
+                    Publicado
+                  </label>
+                  <button onClick={() => toggleSold(item.id)} style={{ width: 200, background: item.sold ? "#34c759" : "#f2f2f7", color: item.sold ? "white" : "#3a3a3c", border: "none", borderRadius: 10, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontFamily: sf, fontWeight: 600 }}>{item.sold ? "✓ Vendido" : "Marcar como vendido"}</button>
+                </div>
                     {isExpanded && (
                       <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
                         {sRes && (
@@ -558,7 +561,7 @@ function ActivityView({ activity }) {
                                     <div key={l}><div style={{ fontSize: 11, color: "#8e8e93", fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>{l}</div><div style={{ fontWeight: 700, color: c, fontSize: 16 }}>{formatEur(v)}</div></div>
                                   ))}
                                 </div>
-                                {wRes.items.map((r, i) => (
+                                {wRes.[...items].sort((a,b) => { const r = i => i.sold?2:i.published?1:0; return r(a)-r(b); }).map((r, i) => (
                                   <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderTop: "1px solid #e5e5ea", fontSize: 13 }}>
                                     <span style={{ color: "#3a3a3c", flex: 1, marginRight: 8 }}>{r.title || r.name || "Artículo"}</span>
                                     <span style={{ fontWeight: 700, color: "#007aff" }}>{formatEur(r.price)}</span>
