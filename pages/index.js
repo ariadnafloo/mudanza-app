@@ -151,7 +151,7 @@ function formatRelTime(date) {
   return `Hace ${d} días`;
 }
 function ActivityView({ activity }) {
-  const [filter, setFilter] = React.useState("all");
+  const [filter, setFilter] = useState("all");
   const filtered = filter === "all" ? activity : activity.filter(e => e.type === filter);
   const sf = "'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
   return (
