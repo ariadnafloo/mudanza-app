@@ -242,29 +242,29 @@ function ActivityView({ activity }) {
     const { data } = await supabase.from("items").insert(newItem).select().single();
     if (data) setItems(prev => [...prev, data]);
     resetForm(); setAdding(false);
+    await supabase.from("activity_log").insert({ type: "added",   name: newItem.name,                                       detail: "Añadido · precio de venta " + formatEur(newItem.suggested), created_at: new Date().toISOString() });
   };
 
   const handleDelete = async (id) => {
     await supabase.from("items").delete().eq("id", id);
-    await supabase.from("activity_log").insert({ type: "added",   name: newItem.name,                                       detail: "Añadido · precio de venta " + formatEur(newItem.suggested), created_at: new Date().toISOString() });
     setItems(prev => prev.filter(i => i.id !== id));
+    await supabase.from("activity_log").insert({ type: "deleted", name: items.find(i => i.id === id)?.name || String(id), detail: "Artículo eliminado",                                           created_at: new Date().toISOString() });
   };
 
   const toggleSold = async (id) => {
-    await supabase.from("activity_log").insert({ type: "deleted", name: items.find(i => i.id === id)?.name || String(id), detail: "Artículo eliminado",                                           created_at: new Date().toISOString() });
     const item = items.find(i => i.id === id);
     const newVal = !item.sold;
     await supabase.from("items").update({ sold: newVal }).eq("id", id);
     setItems(prev => prev.map(i => i.id === id ? { ...i, sold: newVal } : i));
+    await supabase.from("activity_log").insert({ type: "sold",    name: items.find(i => i.id === id)?.name || String(id), detail: "Vendido por " + formatEur(items.find(i => i.id === id)?.suggested || 0), created_at: new Date().toISOString() });
   };
 
-    await supabase.from("activity_log").insert({ type: "sold",    name: items.find(i => i.id === id)?.name || String(id), detail: "Vendido por " + formatEur(items.find(i => i.id === id)?.suggested || 0), created_at: new Date().toISOString() });
   const updateSuggested = async (id, val) => {
     const v = parseFloat(val) || 0;
     await supabase.from("items").update({ suggested: v }).eq("id", id);
     setItems(prev => prev.map(i => i.id === id ? { ...i, suggested: v } : i));
-  };
     await supabase.from("activity_log").insert({ type: "price",   name: items.find(i => i.id === id)?.name || String(id), detail: "Precio actualizado → " + formatEur(parseFloat(val) || 0),         created_at: new Date().toISOString() });
+  };
 
   const updateOriginalPrice = async (id, val) => {
     const orig = parseFloat(val) || 0;
